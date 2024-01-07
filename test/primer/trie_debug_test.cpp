@@ -18,14 +18,28 @@ TEST(TrieDebugger, TestCase) {
   std::mt19937_64 gen(2333);
   std::uniform_int_distribution<uint32_t> dis(0, 100);
 
+  // auto trie = Trie();
+  // for (uint32_t i = 0; i < 10; i++) {
+  //   std::string key = fmt::format("{}", dis(gen));
+  //   auto value = dis(gen);
+  //   trie = trie.Put<uint32_t>(key, value);
+  // }
   auto trie = Trie();
-  for (uint32_t i = 0; i < 10; i++) {
-    std::string key = fmt::format("{}", dis(gen));
-    auto value = dis(gen);
-    trie = trie.Put<uint32_t>(key, value);
-  }
+  trie = trie.Put<uint32_t>("65", 25);
+  trie = trie.Put<uint32_t>("61", 65);
+  trie = trie.Put<uint32_t>("82", 84);
+  trie = trie.Put<uint32_t>("2", 42);
+  trie = trie.Put<uint32_t>("16", 67);
+  trie = trie.Put<uint32_t>("94", 53);
+  trie = trie.Put<uint32_t>("20", 35);
+  trie = trie.Put<uint32_t>("3", 57);
+  trie = trie.Put<uint32_t>("93", 30);
+  trie = trie.Put<uint32_t>("75", 29);
 
   // Put a breakpoint here.
+  // std::cout << "root: " << trie.root_->children_.size() << std::endl;
+  // std::cout << "9: " << trie.root_->children_.at('9')->children_.size() << std::endl;
+  // std::cout << "93: " << *trie.Get<uint32_t>("93") << std::endl;
 
   // (1) How many children nodes are there on the root?
   // Replace `CASE_1_YOUR_ANSWER` in `trie_answer.h` with the correct answer.
