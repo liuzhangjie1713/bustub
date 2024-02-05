@@ -14,6 +14,7 @@
 
 #include <limits>
 #include <list>
+#include <memory>
 #include <mutex>  // NOLINT
 #include <unordered_map>
 #include <vector>
@@ -30,7 +31,7 @@ class LRUKNode {
 
  public:
   LRUKNode() = default;
-  ~LRUKNode() = default;
+  ~LRUKNode() { history_.clear(); }
 
   auto operator==(const LRUKNode &other) const -> bool { return fid_ == other.fid_; }
 
@@ -84,7 +85,7 @@ class LRUKReplacer {
    *
    * @brief Destroys the LRUReplacer.
    */
-  ~LRUKReplacer() = default;
+  ~LRUKReplacer();
 
   /**
    * TODO(P1): Add implementation
@@ -169,8 +170,9 @@ class LRUKReplacer {
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  // std::list<LRUKNode> lru_list_;
+  std::unordered_map<frame_id_t, std::shared_ptr<LRUKNode>> node_store_;
+  // std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  //  std::list<LRUKNode> lru_list_;
   size_t current_timestamp_{0};
   size_t curr_size_{0};
   size_t replacer_size_;

@@ -17,6 +17,7 @@
 #include <queue>
 #include <shared_mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "common/config.h"
@@ -49,6 +50,8 @@ class Context {
 
   // Store the write guards of the pages that you're modifying here.
   std::deque<WritePageGuard> write_set_;
+
+  std::deque<BasicPageGuard> set_;
 
   // You may want to use this when getting value, but not necessary.
   std::deque<ReadPageGuard> read_set_;
@@ -138,6 +141,30 @@ class BPlusTree {
   int leaf_max_size_;
   int internal_max_size_;
   page_id_t header_page_id_;
+
+  /* Helper Method */
+  auto FindNextPage(ReadPageGuard &guard, const KeyType &key, const KeyComparator &comparator, page_id_t &next_page_id)
+      -> int;
+
+  auto FindNextPage(WritePageGuard &guard, const KeyType &key, const KeyComparator &comparator, page_id_t &next_page_id)
+      -> int;
+
+  auto FindValue(ReadPageGuard &guard, const KeyType &key, std::vector<ValueType> *result,
+                 const KeyComparator &comparator) -> bool;
+
+  auto Insert(page_id_t cur_page_id, const KeyType &key, const ValueType &value, Context &ctx) -> bool;
+
+  void TrySplit(page_id_t cur_page_id, WritePageGuard &cur_guard, Context &ctx);
+
+  void Split(WritePageGuard &cur_guard, page_id_t &right_page_id, KeyType &key);
+
+  void Remove(page_id_t cur_page_id, const KeyType &key, Context &ctx, int parent_index);
+  void TryMergeOreRedistribution(page_id_t cur_page_id, WritePageGuard &cur_guard, Context &ctx, int parent_index);
+
+  void Merge(WritePageGuard &left_guard, WritePageGuard &right_guard, WritePageGuard &parent_guard,
+             page_id_t left_page_id, page_id_t right_page_id, int index);
+  void Redistribution(WritePageGuard &cur_guard, WritePageGuard &sibling_guard_guard, WritePageGuard &parent_guard,
+                      int index);
 };
 
 /**

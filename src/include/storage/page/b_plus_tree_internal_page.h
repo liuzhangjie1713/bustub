@@ -62,16 +62,31 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
   /**
    *
-   * @param value the value to search for
+   * @param index The index of the value to get. Index must be non-zero.
+   * @return Value at index
    */
-  auto ValueIndex(const ValueType &value) const -> int;
+  auto ValueAt(int index) const -> ValueType;
 
   /**
    *
-   * @param index the index
-   * @return the value at the index
+   * @param index The index of the value to set. Index must be non-zero.
+   * @param value The new value for value
    */
-  auto ValueAt(int index) const -> ValueType;
+  void SetValueAt(int index, const ValueType &value);
+
+  void Insert(int index, const KeyType &key, const page_id_t &value);
+
+  void InsertByKey(const KeyType &key, const ValueType &value, const KeyComparator &comparator);
+
+  void Split(BPlusTreeInternalPage *other, KeyType &key, const KeyComparator &comparator);
+
+  void RemoveByIndex(int index);
+
+  void RemoveByKey(const KeyType &key, const KeyComparator &comparator);
+
+  void Merge(BPlusTreeInternalPage *other, const KeyComparator &comparator);
+
+  void Clear();
 
   /**
    * @brief For test only, return a string representing all keys in

@@ -31,7 +31,12 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
   }
 }
 
-BufferPoolManager::~BufferPoolManager() { delete[] pages_; }
+BufferPoolManager::~BufferPoolManager() {
+  delete[] pages_;
+  pages_ = nullptr;
+  page_table_.clear();
+  free_list_.clear();
+}
 
 auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   std::scoped_lock latch(latch_);
@@ -67,7 +72,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
   page->pin_count_ = 0;
   page->is_dirty_ = false;
   // insert the page into the page table
-  page_table_.insert({*page_id, frame_id});
+  page_table_[*page_id] = frame_id;
   // pin the frame
   pages_[frame_id].pin_count_++;
   // record the access history of the frame in the replacer for the lru-k algorithm to work
@@ -124,7 +129,7 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   page->pin_count_ = 0;
   page->is_dirty_ = false;
   // insert the page into the page table
-  page_table_.insert({page_id, frame_id});
+  page_table_[page_id] = frame_id;
   // pin the frame
   pages_[frame_id].pin_count_++;
   // record the access history of the frame in the replacer for the lru-k algorithm to work
@@ -139,6 +144,9 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
   if (page_table_.find(page_id) == page_table_.end() || pages_[page_table_[page_id]].GetPinCount() == 0) {
     return false;
   }
+  // set the dirty flag on the page to indicate if the page was modified.
+  pages_[page_table_[page_id]].is_dirty_ |= is_dirty;
+
   // Decrement the pin count of a page. If the pin count reaches 0, the frame should be evictable by the replacer.
   pages_[page_table_[page_id]].pin_count_--;
   // LOG_DEBUG("unpinPage success : page_id %d, frame_id %d, pin_count %d;", page_id, page_table_[page_id],
@@ -146,10 +154,7 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
   if (pages_[page_table_[page_id]].pin_count_ == 0) {
     replacer_->SetEvictable(page_table_[page_id], true);
   }
-  // set the dirty flag on the page to indicate if the page was modified.
-  if (is_dirty) {
-    pages_[page_table_[page_id]].is_dirty_ = is_dirty;
-  }
+
   return true;
 }
 
@@ -211,11 +216,15 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
   return true;
 }
 
-auto BufferPoolManager::AllocatePage() -> page_id_t { return next_page_id_++; }
+auto BufferPoolManager::AllocatePage() -> page_id_t {
+  // std::scoped_lock latch(latch_);
+  return next_page_id_++;
+}
 
 auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard { return {this, FetchPage(page_id)}; }
 
 auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
+  // std::scoped_lock latch(latch_);
   Page *page = FetchPage(page_id);
   if (page == nullptr) {
     return {this, nullptr};
@@ -225,6 +234,7 @@ auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
 }
 
 auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
+  // std::scoped_lock latch(latch_);
   Page *page = FetchPage(page_id);
   if (page == nullptr) {
     return {this, nullptr};

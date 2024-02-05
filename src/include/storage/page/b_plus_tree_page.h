@@ -55,6 +55,10 @@ class BPlusTreePage {
   auto GetMaxSize() const -> int;
   void SetMaxSize(int max_size);
   auto GetMinSize() const -> int;
+  auto IsInsertSafe() const -> bool;
+  auto NeedSplit() const -> bool;
+  auto IsRemoveSafe() const -> bool;
+  auto NeedMergeOreRedistribution() const -> bool;
 
  private:
   // member variable, attributes that both internal and leaf page share
