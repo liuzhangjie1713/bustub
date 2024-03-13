@@ -12,13 +12,15 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "binder/table_ref/bound_join_ref.h"
+#include "common/util/hash_util.h"
 #include "execution/expressions/abstract_expression.h"
 #include "execution/plans/abstract_plan.h"
+#include "binder/table_ref/bound_join_ref.h"
 
 namespace bustub {
 
@@ -80,4 +82,41 @@ class HashJoinPlanNode : public AbstractPlanNode {
   auto PlanNodeToString() const -> std::string override;
 };
 
+/** JoinKey represents a key in a join operation */
+struct JoinKey {
+  /** The values in the tuple that match the join expression to make the key */
+  std::vector<Value> values_;
+
+  auto operator==(const JoinKey &other) const -> bool {
+    for (uint32_t i = 0; i < other.values_.size(); i++) {
+      if (values_[i].CompareEquals(other.values_[i]) != CmpBool::CmpTrue) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+
+struct JoinValue {
+  /** The tuples that match the join key */
+  std::vector<Tuple> tuples_;
+};
+
 }  // namespace bustub
+
+namespace std {
+
+/** Implements std::hash on JoinKey */
+template <>
+struct hash<bustub::JoinKey> {
+  auto operator()(const bustub::JoinKey &join_key) const -> std::size_t {
+    size_t curr_hash = 0;
+    for (const auto &key : join_key.values_) {
+      curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
+    }
+    return curr_hash;
+  }
+};
+
+}  // namespace std
