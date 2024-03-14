@@ -79,6 +79,19 @@ class Optimizer {
   auto IsPredicateTrue(const AbstractExpressionRef &expr) -> bool;
 
   /**
+   * @brief rewrite expression to be used in hash joins. e.g., if we have `SELECT * FROM a, b WHERE a.x = b.y`, we will
+   * have `#0.x = #1.y` in the nlj plan node. We will need to figure out where does `0.x` and `1.y` belong in NLJ
+   * (left table or right table?), and rewrite it as  `left_key=[#0.x], right_key=[#0.y]`.
+   *
+   * @param expr the nlj expression
+   * @param left_key_expressions the left key expressions
+   * @param right_key_expressions the right key expressions
+   */
+  auto RewriteExpressionForHashJoin(const AbstractExpressionRef &expr,
+                                    std::vector<AbstractExpressionRef> *left_key_expressions,
+                                    std::vector<AbstractExpressionRef> *right_key_expressions) -> bool;
+
+  /**
    * @brief optimize order by as index scan if there's an index on a table
    */
   auto OptimizeOrderByAsIndexScan(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;

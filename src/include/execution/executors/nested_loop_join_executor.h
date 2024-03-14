@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
@@ -55,6 +56,21 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const NestedLoopJoinPlanNode *plan_;
+
+  /** The child executor that produces tuple for the left side of join. */
+  std::unique_ptr<AbstractExecutor> left_executor_;
+
+  /** The child executor that produces tuple for the right side of join. */
+  std::unique_ptr<AbstractExecutor> right_executor_;
+
+  /** The tuples from the left side of the join. */
+  std::vector<Tuple> left_tuples_;
+
+  /** The cursor for the left side of the join. */
+  size_t left_cursor_{0};
+
+  /** Whether the current left tuple is matched. */
+  bool is_matched_ = false;
 };
 
 }  // namespace bustub
