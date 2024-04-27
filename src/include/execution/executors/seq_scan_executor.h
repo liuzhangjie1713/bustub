@@ -49,6 +49,11 @@ class SeqScanExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
  private:
+  auto LockTable() -> bool;
+  auto LockRow() -> bool;
+  auto UnlockRow(bool force) -> void;
+  auto CheckIfHoldHigherLockTable(LockManager::LockMode mode, table_oid_t oid) -> bool;
+  auto CheckIfHoldHigherLockRow(LockManager::LockMode mode, table_oid_t oid, RID rid) -> bool;
   /** The sequential scan plan node to be executed */
   const SeqScanPlanNode *plan_;
 
@@ -60,6 +65,10 @@ class SeqScanExecutor : public AbstractExecutor {
 
   std::vector<std::pair<Tuple, RID>> tuple_info_list_;
 
+  LockManager *lock_manager_;
+
   size_t cursor_{0};
+
+  bool done_{false};
 };
 }  // namespace bustub

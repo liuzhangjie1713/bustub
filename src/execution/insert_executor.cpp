@@ -21,11 +21,19 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
     : AbstractExecutor(exec_ctx),
       plan_{plan},
       child_executor_(std::move(child_executor)),
-      table_info_{exec_ctx->GetCatalog()->GetTable(plan_->TableOid())} {}
+      table_info_{exec_ctx->GetCatalog()->GetTable(plan_->TableOid())},
+      lock_manager_(exec_ctx_->GetLockManager()) {}
 
 void InsertExecutor::Init() {
   // Initialize the child executor
   child_executor_->Init();
+
+  // take a table lock
+  bool can_lock = lock_manager_->LockTable(exec_ctx_->GetTransaction(), LockManager::LockMode::INTENTION_EXCLUSIVE,
+                                           plan_->TableOid());
+  if (!can_lock) {
+    throw ExecutionException("InsertExecutor: fail to lock table");
+  }
 
   insert_done_ = false;
 }
@@ -51,11 +59,16 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     }
 
     // Insert the tuple into the table
+    auto txn = exec_ctx_->GetTransaction();
     auto tuple_meta = TupleMeta{INVALID_TXN_ID, INVALID_TXN_ID, false};
-    auto result = table_info_->table_->InsertTuple(tuple_meta, child_tuple, exec_ctx_->GetLockManager(),
-                                                   exec_ctx_->GetTransaction(), plan_->TableOid());
+    auto result = table_info_->table_->InsertTuple(tuple_meta, child_tuple, lock_manager_, txn, plan_->TableOid());
     BUSTUB_ASSERT(result.has_value(), "Insert failed");
     RID tuple_rid = result.value();
+
+    // record transaction table write set for rollback
+    TableWriteRecord table_write_record{plan_->TableOid(), tuple_rid, table_info_->table_.get()};
+    table_write_record.wtype_ = WType::INSERT;
+    txn->AppendTableWriteRecord(table_write_record);
 
     // Update the index
     auto table_indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);

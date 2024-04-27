@@ -65,7 +65,7 @@ class LockManager {
   class LockRequestQueue {
    public:
     /** List of lock requests for the same resource (table or row) */
-    std::list<LockRequest *> request_queue_;
+    std::list<std::shared_ptr<LockRequest>> request_queue_;
     /** For notifying blocked transactions on this rid */
     std::condition_variable cv_;
     /** txn_id of an upgrading transaction (if any) */
@@ -312,15 +312,22 @@ class LockManager {
  private:
   /** Spring 2023 */
   /* You are allowed to modify all functions below. */
-  auto UpgradeLockTable(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> bool;
-  auto UpgradeLockRow(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid) -> bool;
+  auto UpgradeLockTable(Transaction *txn, LockMode curr_lock_mode, LockMode requested_lock_mode, const table_oid_t &oid,
+                        const std::shared_ptr<LockRequestQueue> &lock_request_queue) -> bool;
+  auto UpgradeLockRow(Transaction *txn, LockMode curr_lock_mode, LockMode requested_lock_mode, const table_oid_t &oid,
+                      const RID &rid, const std::shared_ptr<LockRequestQueue> &lock_request_queue) -> bool;
   auto AreLocksCompatible(LockMode l1, LockMode l2) -> bool;
   auto CanTxnTakeLock(Transaction *txn, LockMode lock_mode) -> bool;
-  void GrantNewLocksIfPossible(LockRequestQueue *lock_request_queue);
+  void GrantNewLocksIfPossible(const std::shared_ptr<LockRequestQueue> &lock_request_queue);
   auto CanLockUpgrade(LockMode curr_lock_mode, LockMode requested_lock_mode) -> bool;
+  void UpdateTransactionTableLock(Transaction *txn, const table_oid_t &oid, LockManager::LockMode lock_mode);
+  void UpdateTransactionTableUnlock(Transaction *txn, const table_oid_t &oid, bool upgrade);
+  void UpdateTransactionRowLock(Transaction *txn, const table_oid_t &oid, const RID &rid, LockMode lock_mode);
+  void UpdateTransactionRowUnlock(Transaction *txn, const table_oid_t &oid, const RID &rid, bool force, bool upgrade);
   auto CheckAppropriateLockOnTable(Transaction *txn, const table_oid_t &oid, LockMode row_lock_mode) -> bool;
-  auto FindCycle(txn_id_t source_txn, std::vector<txn_id_t> &path, std::unordered_set<txn_id_t> &on_path,
-                 std::unordered_set<txn_id_t> &visited, txn_id_t *abort_txn_id) -> bool;
+  auto FindCycle(txn_id_t source_txn, std::unordered_set<txn_id_t> &on_path, std::unordered_set<txn_id_t> &visited,
+                 txn_id_t *abort_txn_id) -> bool;
+  void BuildWaitForGraph();
   void UnlockAll();
 
   /** Structure that holds lock requests for a given table oid */

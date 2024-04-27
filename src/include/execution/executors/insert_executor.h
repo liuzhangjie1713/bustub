@@ -66,6 +66,9 @@ class InsertExecutor : public AbstractExecutor {
 
   /** Whether the insert has been done */
   bool insert_done_ = false;
+
+  /** lock manager */
+  LockManager *lock_manager_;
 };
 
 }  // namespace bustub

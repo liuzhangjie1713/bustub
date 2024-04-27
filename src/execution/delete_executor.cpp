@@ -50,8 +50,14 @@ auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
       break;
     }
 
+    auto txn = exec_ctx_->GetTransaction();
     // Delete the tuple from the table
     table_info_->table_->UpdateTupleMeta(TupleMeta{INVALID_TXN_ID, INVALID_TXN_ID, true}, child_rid);
+
+    // record transaction write set for rollback
+    TableWriteRecord write_record{plan_->TableOid(), child_rid, table_info_->table_.get()};
+    write_record.wtype_ = WType::DELETE;
+    txn->AppendTableWriteRecord(write_record);
 
     // Update the index
     auto table_indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
